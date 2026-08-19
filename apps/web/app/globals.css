@@ -1,0 +1,21 @@
+@import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
+
+:root {
+  --background: #0b0d10;
+  --foreground: #e6e6e6;
+  --panel: #16191d;
+  --border: #2a2e33;
+  --accent: #6ee7b7;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}

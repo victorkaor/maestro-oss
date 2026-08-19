@@ -1,0 +1,33 @@
+{
+  "name": "maestro-oss",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Open-source multi-agent orchestration canvas",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run build -w packages/shared && concurrently -n shared,daemon,web -c magenta,yellow,cyan \"npm run dev -w packages/shared\" \"npm run dev -w apps/daemon\" \"npm run dev -w apps/web\"",
+    "dev:daemon": "npm run dev -w apps/daemon",
+    "dev:web": "npm run dev -w apps/web",
+    "build": "npm run build -w packages/shared && npm run build -w apps/daemon && npm run build -w apps/web",
+    "test": "vitest run",
+    "typecheck": "npm run build -w packages/shared && npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "gen:vapid": "web-push generate-vapid-keys"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "^2.1.8",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.17.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.2",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
