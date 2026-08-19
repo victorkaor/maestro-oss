@@ -25,22 +25,9 @@ export interface CanvasEdgeRow {
   created_at: string;
 }
 
-export interface AgentRow {
-  id: string;
-  node_id: string;
-  kind: "cli" | "api";
-  provider: string | null;
-  model: string | null;
-  role: string | null;
-  system_prompt: string | null;
-  cli_command: string | null;
-  status: "idle" | "starting" | "running" | "error" | "stopped";
-  created_at: string;
-}
-
 export interface MessageRow {
   id: string;
-  agent_id: string;
+  node_id: string;
   role: "user" | "agent" | "system";
   content: string;
   created_at: string;
@@ -48,7 +35,7 @@ export interface MessageRow {
 
 export interface RoutineRow {
   id: string;
-  agent_id: string;
+  node_id: string;
   cron_expr: string;
   prompt: string;
   enabled: boolean;

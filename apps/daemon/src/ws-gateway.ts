@@ -36,9 +36,13 @@ export function startWsGateway(): void {
 
   wss.on("connection", (ws) => {
     let session: Session | undefined;
+    // Messages are processed one at a time, in arrival order: the client
+    // always sends "auth" first, and later messages (e.g. agent.spawn) must
+    // not race ahead of the async token-verification that auth performs.
+    let queue: Promise<void> = Promise.resolve();
 
     ws.on("message", (raw) => {
-      void (async () => {
+      queue = queue.then(async () => {
         let msg;
         try {
           msg = parseClientMessage(JSON.parse(raw.toString()));
@@ -84,7 +88,10 @@ export function startWsGateway(): void {
         }
 
         await handleMessage(session, msg, ws, browserPortal, devicePortal);
-      })();
+      }).catch((err: unknown) => {
+        console.error("[daemon] message handler failed", err);
+        send(ws, { type: "error", message: err instanceof Error ? err.message : String(err) });
+      });
     });
 
     ws.on("close", () => {
@@ -112,7 +119,7 @@ async function handleMessage(
           if (msg.kind === "cli" && (stream === "stdout")) {
             void session.supabase
               .from("messages")
-              .insert({ agent_id: msg.agentId, role: "agent", content: chunk })
+              .insert({ node_id: msg.agentId, role: "agent", content: chunk })
               .then(({ error }) => error && console.error("[daemon] persist chunk failed", error));
           } else if (msg.kind === "api" && stream === "assistant") {
             session.buffers.set(msg.agentId, (session.buffers.get(msg.agentId) ?? "") + chunk);
@@ -126,11 +133,10 @@ async function handleMessage(
               session.buffers.delete(msg.agentId);
               void session.supabase
                 .from("messages")
-                .insert({ agent_id: msg.agentId, role: "agent", content: buffered })
+                .insert({ node_id: msg.agentId, role: "agent", content: buffered })
                 .then(({ error: e }) => e && console.error("[daemon] persist message failed", e));
             }
           }
-          void session.supabase.from("agents").update({ status }).eq("id", msg.agentId);
         },
       };
 
@@ -153,7 +159,7 @@ async function handleMessage(
       runner.send(msg.content);
       const { error } = await session.supabase
         .from("messages")
-        .insert({ agent_id: msg.agentId, role: "user", content: msg.content });
+        .insert({ node_id: msg.agentId, role: "user", content: msg.content });
       if (error) console.error("[daemon] persist input failed", error);
       return;
     }

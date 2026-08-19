@@ -35,11 +35,21 @@ export function spawnApiAgent(
           ...(options.systemPrompt !== undefined ? { system: options.systemPrompt } : {}),
         });
 
+        // Iterate fullStream (not textStream) so a provider-level failure
+        // (bad model id, no credit, rate limit) surfaces as an "error" part
+        // instead of silently ending the stream with no text and no throw.
         let full = "";
-        for await (const delta of result.textStream) {
-          full += delta;
-          callbacks.onOutput("assistant", delta);
+        let streamError: unknown;
+        for await (const part of result.fullStream) {
+          if (part.type === "text-delta") {
+            full += part.textDelta;
+            callbacks.onOutput("assistant", part.textDelta);
+          } else if (part.type === "error") {
+            streamError = part.error;
+          }
         }
+        if (streamError) throw streamError;
+
         history.push({ role: "assistant", content: full });
         busy = false;
         callbacks.onStatus("idle");

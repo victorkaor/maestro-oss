@@ -1,11 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -28,8 +26,10 @@ export default function LoginPage() {
       setError(authError.message);
       return;
     }
-    router.push("/workspace");
-    router.refresh();
+    // Hard navigation (not router.push) so the browser sends the session
+    // cookie @supabase/ssr just set on this request — router.push can race
+    // ahead of the cookie write and get bounced back to /login by middleware.
+    window.location.assign("/workspace");
   }
 
   return (
@@ -41,6 +41,8 @@ export default function LoginPage() {
         <h1 className="text-xl font-semibold">maestro-oss</h1>
         <input
           type="email"
+          name="email"
+          autoComplete="email"
           required
           placeholder="Email"
           value={email}
@@ -49,6 +51,8 @@ export default function LoginPage() {
         />
         <input
           type="password"
+          name="password"
+          autoComplete="current-password"
           required
           minLength={6}
           placeholder="Password"

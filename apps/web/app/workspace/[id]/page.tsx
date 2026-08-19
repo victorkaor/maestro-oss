@@ -34,13 +34,13 @@ export default async function WorkspacePage({ params }: { params: Promise<{ id: 
     const { data: messageRows } = await supabase
       .from("messages")
       .select("*")
-      .in("agent_id", agentIds)
+      .in("node_id", agentIds)
       .order("created_at", { ascending: true });
     messagesByAgent = new Map();
     for (const row of (messageRows ?? []) as MessageRow[]) {
-      const list = messagesByAgent.get(row.agent_id) ?? [];
+      const list = messagesByAgent.get(row.node_id) ?? [];
       list.push(row);
-      messagesByAgent.set(row.agent_id, list);
+      messagesByAgent.set(row.node_id, list);
     }
   }
 

@@ -93,6 +93,9 @@ interface CanvasState {
   subscribePush: (subscription: { endpoint: string; keys: { p256dh: string; auth: string } }) => void;
 }
 
+// Guards init()/teardown() against React's dev-mode double-invoked effects — see init()'s comment.
+let connectionGeneration = 0;
+
 function handleServerMessage(get: () => CanvasState, set: (fn: (s: CanvasState) => Partial<CanvasState>) => void, msg: ServerMessage): void {
   switch (msg.type) {
     case "auth.ok":
@@ -205,11 +208,16 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   daemon: null,
 
   init: async (workspaceId, nodes, edges) => {
+    // React (dev/StrictMode) mounts this effect twice back-to-back; the
+    // first mount's async setup can resolve *after* its own cleanup already
+    // ran. A generation token lets a superseded init() notice and bail
+    // instead of clobbering the connection a later init() just made.
+    const myGeneration = ++connectionGeneration;
     const supabase = createClient();
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session || myGeneration !== connectionGeneration) return;
 
     set(() => ({ workspaceId, nodes, edges, daemonStatus: "connecting" }));
 
@@ -219,6 +227,11 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       onMessage: (msg) => handleServerMessage(get, set, msg),
       onClose: () => set(() => ({ daemonStatus: "disconnected" })),
     });
+
+    if (myGeneration !== connectionGeneration) {
+      daemon.close();
+      return;
+    }
     set(() => ({ daemon }));
 
     for (const node of nodes) {
@@ -238,6 +251,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   teardown: () => {
+    connectionGeneration++;
     get().daemon?.close();
     set(() => ({ daemon: null, daemonStatus: "disconnected", nodes: [], edges: [], workspaceId: null }));
   },
@@ -250,7 +264,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     if (!workspaceId || !connection.source || !connection.target) return;
     void createClient()
       .from("canvas_edges")
-      .insert({ workspace_id: workspaceId, source_node_id: connection.source, target_node_id: connection.target });
+      .insert({ workspace_id: workspaceId, source_node_id: connection.source, target_node_id: connection.target })
+      .then(({ error }) => error && console.error("[canvas] persist edge failed", error));
   },
 
   addNode: (data, position) => {
@@ -292,7 +307,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         type: node.data.kind,
         position: node.position,
         data: node.data,
-      });
+      })
+      .then(({ error }) => error && console.error("[canvas] persist node failed", error));
   },
 
   sendAgentInput: (nodeId, content) => {
