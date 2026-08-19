@@ -1,5 +1,11 @@
 # maestro-oss
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-6ee7b7.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](tsconfig.base.json)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)](apps/web)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white)](package.json)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
 Open-source multi-agent orchestration canvas. Drop AI agents (CLI or API-backed)
 onto a shared canvas, wire them together, give them sticky notes, cron routines,
 a browser they can drive, and a phone/simulator they can tap around in.
